@@ -3,7 +3,7 @@
   # Explicitly set base directory to root
   base = "."
   
-  # Ultra-simple build command
+  # Simple build command - Vite handles TypeScript
   command = "npm install && cd client && npm install && npm run build"
   
   # Directory to deploy (client build output)
