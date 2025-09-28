@@ -1,7 +1,10 @@
 # Netlify configuration for VibeCoding platform
 [build]
-  # Simplified and reliable build command
-  command = "node --version && npm --version && echo 'Current directory:' && pwd && echo 'Directory structure:' && find . -maxdepth 2 -type d && npm ci --legacy-peer-deps && cd client && npm ci --legacy-peer-deps && npm run build"
+  # Explicitly set base directory to root
+  base = "."
+  
+  # Ultra-simple build command
+  command = "npm install && cd client && npm install && npm run build"
   
   # Directory to deploy (client build output)
   publish = "client/dist"
