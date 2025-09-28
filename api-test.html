@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Code Generation API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Advanced Code Generation API Test</h1>
+    
+    <div class="section">
+        <h2>Test Framework Options</h2>
+        <button onclick="testFrameworks()">Get Frameworks</button>
+        <div id="frameworks-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test Component Libraries</h2>
+        <button onclick="testComponentLibraries()">Get Component Libraries</button>
+        <div id="component-libraries-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test CSS Frameworks</h2>
+        <button onclick="testCSSFrameworks()">Get CSS Frameworks</button>
+        <div id="css-frameworks-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test State Management</h2>
+        <button onclick="testStateManagement()">Get State Management Options</button>
+        <div id="state-management-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test Routing Options</h2>
+        <button onclick="testRouting()">Get Routing Options</button>
+        <div id="routing-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Test Configuration Validation</h2>
+        <button onclick="testValidation()">Validate Configuration</button>
+        <div id="validation-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        const TEST_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAdGVzdC5jb20iLCJpYXQiOjE2OTc2NzMwMDB9.test';
+
+        async function makeRequest(endpoint, method = 'GET', body = null) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method,
+                    headers: {
+                        'Authorization': `Bearer ${TEST_TOKEN}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function displayResult(elementId, result) {
+            const element = document.getElementById(elementId);
+            const className = result.success ? 'success' : 'error';
+            
+            element.innerHTML = `
+                <div class="${className}">
+                    <strong>Status:</strong> ${result.success ? 'Success' : 'Error'} 
+                    ${result.status ? `(${result.status})` : ''}
+                </div>
+                <pre>${JSON.stringify(result.data || result.error, null, 2)}</pre>
+            `;
+        }
+
+        async function testFrameworks() {
+            const result = await makeRequest('/ai/config/frameworks');
+            displayResult('frameworks-result', result);
+        }
+
+        async function testComponentLibraries() {
+            const result = await makeRequest('/ai/config/component-libraries');
+            displayResult('component-libraries-result', result);
+        }
+
+        async function testCSSFrameworks() {
+            const result = await makeRequest('/ai/config/css-frameworks');
+            displayResult('css-frameworks-result', result);
+        }
+
+        async function testStateManagement() {
+            const result = await makeRequest('/ai/config/state-management');
+            displayResult('state-management-result', result);
+        }
+
+        async function testRouting() {
+            const result = await makeRequest('/ai/config/routing');
+            displayResult('routing-result', result);
+        }
+
+        async function testValidation() {
+            const sampleConfig = {
+                framework: { id: 'react', name: 'React' },
+                language: 'TypeScript',
+                cssFramework: { id: 'tailwind', name: 'Tailwind CSS' },
+                stateManagement: { id: 'context', name: 'React Context' },
+                routing: { id: 'react-router', name: 'React Router' },
+                database: 'postgresql',
+                hosting: 'vercel',
+                features: {
+                    authentication: true,
+                    realtime: false,
+                    fileUpload: false,
+                    payments: false,
+                    notifications: false,
+                    analytics: false,
+                    i18n: false,
+                    pwa: false
+                }
+            };
+            
+            const result = await makeRequest('/ai/config/validate', 'POST', sampleConfig);
+            displayResult('validation-result', result);
+        }
+
+        // Test all endpoints when page loads
+        window.onload = function() {
+            testFrameworks();
+            testComponentLibraries();
+            testCSSFrameworks();
+            testStateManagement();
+            testRouting();
+            testValidation();
+        };
+    </script>
+</body>
+</html>
