@@ -1,7 +1,7 @@
 # Netlify configuration for VibeCoding platform
 [build]
   # Build command for the React frontend
-  command = "npm install && cd client && npm install && npm run build"
+  command = "chmod +x netlify-build.sh && ./netlify-build.sh"
   
   # Directory to deploy (client build output)
   publish = "client/dist"
