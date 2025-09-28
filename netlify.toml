@@ -1,16 +1,18 @@
 # Netlify configuration for VibeCoding platform
 [build]
-  # Build command for the React frontend with debugging
-  command = "echo 'Current directory:' && pwd && echo 'Directory contents:' && ls -la && echo 'Installing root deps...' && npm install --legacy-peer-deps && echo 'Navigating to client...' && cd client && echo 'Client directory contents:' && ls -la && echo 'Installing client deps...' && npm install --legacy-peer-deps && echo 'Building client...' && npm run build && echo 'Build complete!' && ls -la dist/"
+  # Simplified and reliable build command
+  command = "node --version && npm --version && echo 'Current directory:' && pwd && echo 'Directory structure:' && find . -maxdepth 2 -type d && npm ci --legacy-peer-deps && cd client && npm ci --legacy-peer-deps && npm run build"
   
   # Directory to deploy (client build output)
   publish = "client/dist"
   
-  # Set Node.js version
+  # Set Node.js version and environment variables
   [build.environment]
-    NODE_VERSION = "18"
+    NODE_VERSION = "18.19.0"
+    NPM_VERSION = "10.2.3"
     NPM_FLAGS = "--legacy-peer-deps"
     CI = "false"
+    NODE_ENV = "production"
 
 [build.processing]
   skip_processing = false

@@ -44,5 +44,9 @@
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "vite-plugin-monaco-editor": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.19.0",
+    "npm": ">=10.2.0"
   }
 }
