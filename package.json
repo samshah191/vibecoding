@@ -14,9 +14,7 @@
     "start": "cd server && npm start",
     "setup": "npm install && cd client && npm install && cd ../server && npm install",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "db:migrate": "cd server && npx prisma migrate dev",
-    "db:studio": "cd server && npx prisma studio"
+    "docker:down": "docker-compose down"
   },
   "keywords": ["vibe-coding", "ai", "no-code", "app-builder", "base44-clone"],
   "author": "Mohammad Samal Shah",

@@ -1,7 +1,7 @@
 # Netlify configuration for VibeCoding platform
 [build]
-  # Build command for the React frontend
-  command = "chmod +x netlify-build.sh && ./netlify-build.sh"
+  # Build command for the React frontend with debugging
+  command = "echo 'Current directory:' && pwd && echo 'Directory contents:' && ls -la && echo 'Installing root deps...' && npm install --legacy-peer-deps && echo 'Navigating to client...' && cd client && echo 'Client directory contents:' && ls -la && echo 'Installing client deps...' && npm install --legacy-peer-deps && echo 'Building client...' && npm run build && echo 'Build complete!' && ls -la dist/"
   
   # Directory to deploy (client build output)
   publish = "client/dist"

@@ -1,10 +1,9 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { supabase } from '../services/supabase';
 import { AuthenticatedRequest } from '../types/auth';
 import { z } from 'zod';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Like System Routes
 
@@ -21,12 +20,12 @@ router.post('/apps/:appId/like', async (req: AuthenticatedRequest, res) => {
     const { appId } = req.params;
 
     // Check if app exists and is public
-    const app = await prisma.app.findFirst({
-      where: {
-        id: appId,
-        published: true
-      }
-    });
+    const { data: app } = await supabase
+      .from('apps')
+      .select('*')
+      .eq('id', appId)
+      .eq('published', true)
+      .single();
 
     if (!app) {
       return res.status(404).json({
@@ -36,14 +35,12 @@ router.post('/apps/:appId/like', async (req: AuthenticatedRequest, res) => {
     }
 
     // Check if already liked
-    const existingLike = await prisma.like.findUnique({
-      where: {
-        userId_appId: {
-          userId,
-          appId
-        }
-      }
-    });
+    const { data: existingLike } = await supabase
+      .from('likes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('app_id', appId)
+      .single();
 
     if (existingLike) {
       return res.status(400).json({
@@ -53,17 +50,18 @@ router.post('/apps/:appId/like', async (req: AuthenticatedRequest, res) => {
     }
 
     // Create like
-    await prisma.like.create({
-      data: {
-        userId,
-        appId
-      }
-    });
+    await supabase
+      .from('likes')
+      .insert({
+        user_id: userId,
+        app_id: appId
+      });
 
     // Get updated like count
-    const likeCount = await prisma.like.count({
-      where: { appId }
-    });
+    const { count: likeCount } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('app_id', appId);
 
     res.json({
       success: true,
@@ -91,14 +89,12 @@ router.delete('/apps/:appId/like', async (req: AuthenticatedRequest, res) => {
     }
     const { appId } = req.params;
 
-    const existingLike = await prisma.like.findUnique({
-      where: {
-        userId_appId: {
-          userId,
-          appId
-        }
-      }
-    });
+    const { data: existingLike } = await supabase
+      .from('likes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('app_id', appId)
+      .single();
 
     if (!existingLike) {
       return res.status(400).json({
@@ -108,19 +104,17 @@ router.delete('/apps/:appId/like', async (req: AuthenticatedRequest, res) => {
     }
 
     // Remove like
-    await prisma.like.delete({
-      where: {
-        userId_appId: {
-          userId,
-          appId
-        }
-      }
-    });
+    await supabase
+      .from('likes')
+      .delete()
+      .eq('user_id', userId)
+      .eq('app_id', appId);
 
     // Get updated like count
-    const likeCount = await prisma.like.count({
-      where: { appId }
-    });
+    const { count: likeCount } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('app_id', appId);
 
     res.json({
       success: true,
@@ -144,25 +138,24 @@ router.get('/apps/:appId/likes', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const likes = await prisma.like.findMany({
-      where: { appId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    });
+    const { data: likes } = await supabase
+      .from('likes')
+      .select(`
+        *,
+        users!inner (
+          id,
+          name,
+          email
+        )
+      `)
+      .eq('app_id', appId)
+      .range(skip, skip + limit - 1)
+      .order('created_at', { ascending: false });
 
-    const total = await prisma.like.count({
-      where: { appId }
-    });
+    const { count: total } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('app_id', appId);
 
     res.json({
       success: true,
@@ -171,7 +164,7 @@ router.get('/apps/:appId/likes', async (req, res) => {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil((total || 0) / limit)
       }
     });
   } catch (error) {
@@ -214,12 +207,12 @@ router.post('/apps/:appId/comments', async (req: AuthenticatedRequest, res) => {
     const { content, parentId } = parsedBody.data;
 
     // Check if app exists and is public
-    const app = await prisma.app.findFirst({
-      where: {
-        id: appId,
-        published: true
-      }
-    });
+    const { data: app } = await supabase
+      .from('apps')
+      .select('*')
+      .eq('id', appId)
+      .eq('published', true)
+      .single();
 
     if (!app) {
       return res.status(404).json({
@@ -230,12 +223,12 @@ router.post('/apps/:appId/comments', async (req: AuthenticatedRequest, res) => {
 
     // If parentId is provided, check if parent comment exists
     if (parentId) {
-      const parentComment = await prisma.comment.findFirst({
-        where: {
-          id: parentId,
-          appId
-        }
-      });
+      const { data: parentComment } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('id', parentId)
+        .eq('app_id', appId)
+        .single();
 
       if (!parentComment) {
         return res.status(404).json({
@@ -246,34 +239,31 @@ router.post('/apps/:appId/comments', async (req: AuthenticatedRequest, res) => {
     }
 
     // Create comment
-    const comment = await prisma.comment.create({
-      data: {
+    const { data: comment } = await supabase
+      .from('comments')
+      .insert({
         content,
-        userId,
-        appId,
-        parentId
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        replies: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
-          }
-        }
-      }
-    });
+        user_id: userId,
+        app_id: appId,
+        parent_id: parentId
+      })
+      .select(`
+        *,
+        users!inner (
+          id,
+          name,
+          email
+        ),
+        replies:comments!parent_id (
+          *,
+          users!inner (
+            id,
+            name,
+            email
+          )
+        )
+      `)
+      .single();
 
     res.status(201).json({
       success: true,
@@ -297,43 +287,34 @@ router.get('/apps/:appId/comments', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const comments = await prisma.comment.findMany({
-      where: {
-        appId,
-        parentId: null // Only top-level comments
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        replies: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'asc' }
-        }
-      },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    });
+    const { data: comments } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        users!inner (
+          id,
+          name,
+          email
+        ),
+        replies:comments!parent_id (
+          *,
+          users!inner (
+            id,
+            name,
+            email
+          )
+        )
+      `)
+      .eq('app_id', appId)
+      .is('parent_id', null) // Only top-level comments
+      .range(skip, skip + limit - 1)
+      .order('created_at', { ascending: false });
 
-    const total = await prisma.comment.count({
-      where: {
-        appId,
-        parentId: null
-      }
-    });
+    const { count: total } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('app_id', appId)
+      .is('parent_id', null);
 
     res.json({
       success: true,
@@ -342,7 +323,7 @@ router.get('/apps/:appId/comments', async (req, res) => {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil((total || 0) / limit)
       }
     });
   } catch (error) {
@@ -382,12 +363,12 @@ router.put('/comments/:commentId', async (req: AuthenticatedRequest, res) => {
     const { content } = parsedBody.data;
 
     // Find comment and check ownership
-    const existingComment = await prisma.comment.findFirst({
-      where: {
-        id: commentId,
-        userId
-      }
-    });
+    const { data: existingComment } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('id', commentId)
+      .eq('user_id', userId)
+      .single();
 
     if (!existingComment) {
       return res.status(404).json({
@@ -396,19 +377,19 @@ router.put('/comments/:commentId', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    const comment = await prisma.comment.update({
-      where: { id: commentId },
-      data: { content },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      }
-    });
+    const { data: comment } = await supabase
+      .from('comments')
+      .update({ content })
+      .eq('id', commentId)
+      .select(`
+        *,
+        users!inner (
+          id,
+          name,
+          email
+        )
+      `)
+      .single();
 
     res.json({
       success: true,
@@ -437,12 +418,12 @@ router.delete('/comments/:commentId', async (req: AuthenticatedRequest, res) => 
     const { commentId } = req.params;
 
     // Find comment and check ownership
-    const existingComment = await prisma.comment.findFirst({
-      where: {
-        id: commentId,
-        userId
-      }
-    });
+    const { data: existingComment } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('id', commentId)
+      .eq('user_id', userId)
+      .single();
 
     if (!existingComment) {
       return res.status(404).json({
@@ -452,9 +433,10 @@ router.delete('/comments/:commentId', async (req: AuthenticatedRequest, res) => 
     }
 
     // Delete comment (this will also delete replies due to cascade)
-    await prisma.comment.delete({
-      where: { id: commentId }
-    });
+    await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId);
 
     res.json({
       success: true,
